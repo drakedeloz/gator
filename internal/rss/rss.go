@@ -40,7 +40,7 @@ func Aggregate(s *core.State, cmd core.Command) error {
 
 func AddFeed(s *core.State, cmd core.Command) error {
 	if len(cmd.Args) < 2 {
-		return fmt.Errorf("%v command usage: gator addfeed name url\n", cmd.Name)
+		return fmt.Errorf("%v command usage: gator addfeed name url", cmd.Name)
 	}
 
 	dbUser, err := s.Queries.GetUser(context.Background(), s.Config.CurrentUser)
@@ -58,6 +58,27 @@ func AddFeed(s *core.State, cmd core.Command) error {
 	}
 
 	fmt.Println(newFeed)
+	return nil
+}
+
+func Feeds(s *core.State, cmd core.Command) error {
+	dbFeeds, err := s.Queries.GetAllFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("could not get feeds: %v", err)
+	}
+
+	if len(dbFeeds) == 0 {
+		fmt.Println("No feeds found in database")
+		return nil
+	}
+
+	for _, feed := range dbFeeds {
+		fmt.Println("----------")
+		fmt.Println(feed.FeedName)
+		fmt.Println(feed.Url)
+		fmt.Println(feed.UserName)
+	}
+	fmt.Println("----------")
 	return nil
 }
 

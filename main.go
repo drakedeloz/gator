@@ -30,6 +30,7 @@ func main() {
 	cmds.Register("register", core.HandlerRegister)
 	cmds.Register("users", core.GetUsers)
 	cmds.Register("addfeed", rss.AddFeed)
+	cmds.Register("feeds", rss.Feeds)
 	cmds.Register("agg", rss.Aggregate)
 	cmds.Register("reset", core.HandlerReset)
 
