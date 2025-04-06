@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/drakedeloz/gator/internal/core"
+	"github.com/drakedeloz/gator/internal/database"
 )
 
 type RSSFeed struct {
@@ -34,6 +35,29 @@ func Aggregate(s *core.State, cmd core.Command) error {
 	}
 
 	fmt.Println(feed)
+	return nil
+}
+
+func AddFeed(s *core.State, cmd core.Command) error {
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("%v command usage: gator addfeed name url\n", cmd.Name)
+	}
+
+	dbUser, err := s.Queries.GetUser(context.Background(), s.Config.CurrentUser)
+	if err != nil {
+		return fmt.Errorf("could not get current user %v from db: %v", s.Config.CurrentUser, err)
+	}
+
+	newFeed, err := s.Queries.CreateFeed(context.Background(), database.CreateFeedParams{
+		UserID: dbUser.ID,
+		Name:   cmd.Args[0],
+		Url:    cmd.Args[1],
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create new feed: %v", err)
+	}
+
+	fmt.Println(newFeed)
 	return nil
 }
 
