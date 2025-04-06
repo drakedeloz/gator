@@ -27,6 +27,8 @@ func main() {
 
 	cmds.Register("login", core.HandlerLogin)
 	cmds.Register("register", core.HandlerRegister)
+	cmds.Register("users", core.GetUsers)
+	cmds.Register("reset", core.HandlerReset)
 
 	args := os.Args
 	if len(args) < 2 {

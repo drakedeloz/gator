@@ -54,6 +54,31 @@ func HandlerRegister(s *State, cmd Command) error {
 	return nil
 }
 
+func GetUsers(s *State, cmd Command) error {
+	dbUsers, err := s.Queries.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, user := range dbUsers {
+		if s.Config.CurrentUser == user.Name {
+			fmt.Printf("* %v (current)\n", user.Name)
+			continue
+		}
+		fmt.Printf("* %v\n", user.Name)
+	}
+	return nil
+}
+
+func HandlerReset(s *State, cmd Command) error {
+	err := s.Queries.Reset(context.Background())
+	if err != nil {
+		return fmt.Errorf("could not reset database: %v", err)
+	}
+
+	return nil
+}
+
 func (c *Commands) Register(name string, f func(*State, Command) error) {
 	if c.AllCommands == nil {
 		c.AllCommands = make(map[string]func(*State, Command) error)
