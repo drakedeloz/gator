@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 )
@@ -29,23 +30,22 @@ func Read() *Config {
 	return &cfg
 }
 
-func (m *Config) SetUser(user string) {
+func (m *Config) SetUser(user string) error {
 	configPath, err := getConfigFilePath()
 	if err != nil {
-		return
+		return fmt.Errorf("could not get config path: %v", err)
 	}
 	m.CurrentUser = user
 	configBytes, err := json.Marshal(m)
 	if err != nil {
-		log.Fatalf("could not marshal config: %v", err)
-		return
+		return fmt.Errorf("could not marshal config: %v", err)
 	}
 
 	err = os.WriteFile(configPath, configBytes, 0644)
 	if err != nil {
-		log.Fatalf("could not write to config file: %v", err)
-		return
+		return fmt.Errorf("could not write to config file: %v", err)
 	}
+	return nil
 }
 
 func getConfigFilePath() (string, error) {
