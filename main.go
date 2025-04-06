@@ -8,6 +8,7 @@ import (
 	"github.com/drakedeloz/gator/internal/config"
 	"github.com/drakedeloz/gator/internal/core"
 	"github.com/drakedeloz/gator/internal/database"
+	"github.com/drakedeloz/gator/internal/rss"
 	_ "github.com/lib/pq"
 )
 
@@ -28,6 +29,7 @@ func main() {
 	cmds.Register("login", core.HandlerLogin)
 	cmds.Register("register", core.HandlerRegister)
 	cmds.Register("users", core.GetUsers)
+	cmds.Register("agg", rss.Aggregate)
 	cmds.Register("reset", core.HandlerReset)
 
 	args := os.Args
