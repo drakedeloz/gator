@@ -7,6 +7,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/drakedeloz/gator/internal/core"
 	"github.com/drakedeloz/gator/internal/database"
@@ -29,13 +30,21 @@ type RSSItem struct {
 }
 
 func Aggregate(s *core.State, cmd core.Command) error {
-	feed, err := FetchFeed(context.Background(), "https://www.wowhead.com/news/rss/all")
-	if err != nil {
-		return err
+	if len(cmd.Args) < 1 {
+		return fmt.Errorf("time_between_reqs not provided")
 	}
 
-	fmt.Println(feed)
-	return nil
+	duration, err := time.ParseDuration(cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("could not parse duration: %v", err)
+	}
+
+	fmt.Printf("Collecting feeds every %v\n", duration)
+	ticker := time.NewTicker(duration)
+	for ; ; <-ticker.C {
+		ScrapeFeeds(s)
+	}
+
 }
 
 func AddFeed(s *core.State, cmd core.Command, user database.User) error {
@@ -180,4 +189,33 @@ func FetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	}
 
 	return &feed, nil
+}
+
+func ScrapeFeeds(s *core.State) error {
+	feed, err := s.Queries.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("could not get next feed to fetch: %v", err)
+	}
+
+	err = s.Queries.MarkFeedFetched(context.Background(), feed.ID)
+	if err != nil {
+		return fmt.Errorf("could not mark feed as fetched: %v", err)
+	}
+
+	rssFeed, err := FetchFeed(context.Background(), feed.Url)
+	if err != nil {
+		return fmt.Errorf("could not fetch feed: %v", err)
+	}
+
+	fmt.Println("----------")
+	fmt.Println(rssFeed.Channel.Title)
+	fmt.Println(rssFeed.Channel.Description)
+	fmt.Println("----------")
+
+	for _, item := range rssFeed.Channel.Item {
+		fmt.Printf("* %v\n", item.Title)
+	}
+
+	fmt.Println("----------")
+	return nil
 }
