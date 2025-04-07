@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/drakedeloz/gator/internal/core"
 	"github.com/drakedeloz/gator/internal/database"
+	"github.com/lib/pq"
 )
 
 type RSSFeed struct {
@@ -45,6 +48,36 @@ func Aggregate(s *core.State, cmd core.Command) error {
 		ScrapeFeeds(s)
 	}
 
+}
+
+func Browse(s *core.State, cmd core.Command, user database.User) error {
+	var limit int32
+	limit = 2
+	if len(cmd.Args) > 0 {
+		num64, err := strconv.ParseInt(cmd.Args[0], 10, 32)
+		if err != nil {
+			return fmt.Errorf("invalid limit: %v", err)
+		}
+		limit = int32(num64)
+	}
+
+	dbPosts, err := s.Queries.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  limit,
+	})
+	if err != nil {
+		return fmt.Errorf("could not get posts for user %v: %v", user.Name, err)
+	}
+
+	for _, post := range dbPosts {
+		fmt.Println("----------")
+		fmt.Printf("* %v\n", post.Title)
+		fmt.Printf("* %v\n", post.Description)
+		fmt.Printf("* %v\n", post.PublishedAt)
+		fmt.Printf("* %v\n", post.Url)
+	}
+	fmt.Println("----------")
+	return nil
 }
 
 func AddFeed(s *core.State, cmd core.Command, user database.User) error {
@@ -207,15 +240,52 @@ func ScrapeFeeds(s *core.State) error {
 		return fmt.Errorf("could not fetch feed: %v", err)
 	}
 
-	fmt.Println("----------")
-	fmt.Println(rssFeed.Channel.Title)
-	fmt.Println(rssFeed.Channel.Description)
-	fmt.Println("----------")
-
 	for _, item := range rssFeed.Channel.Item {
-		fmt.Printf("* %v\n", item.Title)
+		pubTime, err := convertTime(item.PubDate)
+		if err != nil {
+			log.Printf("could not parse published date: %v", err)
+		}
+		err = s.Queries.CreatePost(context.Background(), database.CreatePostParams{
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: item.Description,
+			PublishedAt: pubTime,
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok {
+				if pqErr.Code == "23505" {
+					return nil
+				}
+			}
+			log.Printf("Error saving post: %v", err)
+		}
 	}
 
-	fmt.Println("----------")
 	return nil
+}
+
+func convertTime(date string) (time.Time, error) {
+	formats := []string{
+		time.RFC1123,
+		time.RFC1123Z,
+		time.RFC3339,
+		time.RFC822,
+		time.RFC822Z,
+	}
+
+	var publishedTime time.Time
+	var err error
+	for _, format := range formats {
+		publishedTime, err = time.Parse(format, date)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		return publishedTime, err
+	}
+
+	return publishedTime, nil
 }

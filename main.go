@@ -36,6 +36,7 @@ func main() {
 	cmds.Register("following", middleware.MiddlewareLoggedIn(rss.Following))
 	cmds.Register("unfollow", middleware.MiddlewareLoggedIn(rss.Unfollow))
 	cmds.Register("agg", rss.Aggregate)
+	cmds.Register("browse", middleware.MiddlewareLoggedIn(rss.Browse))
 	cmds.Register("reset", core.HandlerReset)
 
 	args := os.Args
