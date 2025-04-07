@@ -72,7 +72,6 @@ func Browse(s *core.State, cmd core.Command, user database.User) error {
 	for _, post := range dbPosts {
 		fmt.Println("----------")
 		fmt.Printf("* %v\n", post.Title)
-		fmt.Printf("* %v\n", post.Description)
 		fmt.Printf("* %v\n", post.PublishedAt)
 		fmt.Printf("* %v\n", post.Url)
 	}
