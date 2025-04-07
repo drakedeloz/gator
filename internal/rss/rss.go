@@ -38,23 +38,26 @@ func Aggregate(s *core.State, cmd core.Command) error {
 	return nil
 }
 
-func AddFeed(s *core.State, cmd core.Command) error {
+func AddFeed(s *core.State, cmd core.Command, user database.User) error {
 	if len(cmd.Args) < 2 {
 		return fmt.Errorf("%v command usage: gator addfeed name url", cmd.Name)
 	}
 
-	dbUser, err := s.Queries.GetUser(context.Background(), s.Config.CurrentUser)
-	if err != nil {
-		return fmt.Errorf("could not get current user %v from db: %v", s.Config.CurrentUser, err)
-	}
-
 	newFeed, err := s.Queries.CreateFeed(context.Background(), database.CreateFeedParams{
-		UserID: dbUser.ID,
+		UserID: user.ID,
 		Name:   cmd.Args[0],
 		Url:    cmd.Args[1],
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create new feed: %v", err)
+	}
+
+	_, err = s.Queries.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		UserID: user.ID,
+		FeedID: newFeed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to follow feed: %v", err)
 	}
 
 	fmt.Println(newFeed)
@@ -79,6 +82,67 @@ func Feeds(s *core.State, cmd core.Command) error {
 		fmt.Println(feed.UserName)
 	}
 	fmt.Println("----------")
+	return nil
+}
+
+func Follow(s *core.State, cmd core.Command, user database.User) error {
+	if len(cmd.Args) == 0 {
+		return fmt.Errorf("no url provided")
+	}
+
+	dbFeed, err := s.Queries.GetFeedByUrl(context.Background(), cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("feed not found")
+	}
+
+	feedFollow, err := s.Queries.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		UserID: user.ID,
+		FeedID: dbFeed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to follow feed: %v", err)
+	}
+
+	fmt.Println(feedFollow.FeedName)
+	fmt.Printf("* %v\n", user.Name)
+	return nil
+}
+
+func Following(s *core.State, cmd core.Command, user database.User) error {
+	feeds, err := s.Queries.GetFeedFollowsByUser(context.Background(), user.ID)
+	if err != nil {
+		return fmt.Errorf("could not get followed feeds: %v", err)
+	}
+
+	if len(feeds) == 0 {
+		fmt.Println("You are not following any feeds!")
+		return nil
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("* %v\n", feed.FeedName)
+	}
+	return nil
+}
+
+func Unfollow(s *core.State, cmd core.Command, user database.User) error {
+	if len(cmd.Args) < 1 {
+		return fmt.Errorf("no url provided")
+	}
+
+	dbFeed, err := s.Queries.GetFeedByUrl(context.Background(), cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("feed not found")
+	}
+
+	err = s.Queries.UnfollowFeed(context.Background(), database.UnfollowFeedParams{
+		UserID: user.ID,
+		FeedID: dbFeed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("could not unfollow feed: %v", err)
+	}
+
 	return nil
 }
 

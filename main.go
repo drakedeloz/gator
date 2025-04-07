@@ -9,6 +9,7 @@ import (
 	"github.com/drakedeloz/gator/internal/core"
 	"github.com/drakedeloz/gator/internal/database"
 	"github.com/drakedeloz/gator/internal/rss"
+	"github.com/drakedeloz/gator/middleware"
 	_ "github.com/lib/pq"
 )
 
@@ -29,8 +30,11 @@ func main() {
 	cmds.Register("login", core.HandlerLogin)
 	cmds.Register("register", core.HandlerRegister)
 	cmds.Register("users", core.GetUsers)
-	cmds.Register("addfeed", rss.AddFeed)
+	cmds.Register("addfeed", middleware.MiddlewareLoggedIn(rss.AddFeed))
 	cmds.Register("feeds", rss.Feeds)
+	cmds.Register("follow", middleware.MiddlewareLoggedIn(rss.Follow))
+	cmds.Register("following", middleware.MiddlewareLoggedIn(rss.Following))
+	cmds.Register("unfollow", middleware.MiddlewareLoggedIn(rss.Unfollow))
 	cmds.Register("agg", rss.Aggregate)
 	cmds.Register("reset", core.HandlerReset)
 
